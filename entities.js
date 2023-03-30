@@ -3,11 +3,13 @@ function getRandomInRange(min, max) {
 }
 
 
+
 class Entity {
-    constructor(position, size) {
+    constructor(position, size, ecosystem) {
         this.position = position;
         this.size = size;
         this.image = null;
+        this.ecosystem = ecosystem;
     }
 
     getPosition() {
@@ -32,8 +34,8 @@ class Entity {
 }
 
 class Animal extends Entity {
-    constructor(position, size, speed, energy, image, className) {
-        super(position, size);
+    constructor(position, size, speed, energy, image, className, ecosystem) {
+        super(position, size, ecosystem);
         this.speed = speed;
         this.energy = energy;
         this.picturePath = null;
@@ -61,14 +63,31 @@ class Animal extends Entity {
     }
 
     checkMove(newX, newY) {
-        let ecosystem = document.getElementById('ecosystem');
-        newX = newX < 0 ? 0 : newX > ecosystem.clientWidth - (this.size / 2)
-            ? ecosystem.clientWidth : newX;
-        newY = newY < 0 ? 0 : newY > ecosystem.clientHeight - (this.size / 2)
-            ? ecosystem.clientHeight : newY;
+        if (newX < 0) {
+            this.image.classList.add('animal--no-transition');
+            newX = this.ecosystem[0] - (this.size / 2);
+        } else if (newX > this.ecosystem[0] - (this.size / 2)) {
+            this.image.classList.add('animal--no-transition');
+            newX = 0;
+        }
+        if (newY < 0) {
+            this.image.classList.add('animal--no-transition');
+            newY = this.ecosystem[1] - (this.size / 2);
+        } else if (newY > this.ecosystem[1] - (this.size / 2)) {
+            this.image.classList.add('animal--no-transition');
+            newY = 0;
+        }
         this.image.style.left = `${newX}px`;
         this.image.style.top = `${newY}px`;
         this.position = [newX, newY];
+        let thisImage = this.image;
+        if (this.image.classList.contains('animal--no-transition')) {
+            setTimeout(function () {
+                if (thisImage.classList.contains('animal--no-transition')) {
+                    thisImage.classList.remove('animal--no-transition');
+                }
+            }, 100);
+        }
     }
 
     move() {
@@ -109,8 +128,8 @@ class Animal extends Entity {
 }
 
 class HungryPredator extends Animal {
-    constructor(position, size, speed, energy, image, className) {
-        super(position, size, speed, energy, image, className);
+    constructor(position, size, speed, energy, image, className, ecosystem) {
+        super(position, size, speed, energy, image, className, ecosystem);
     }
 
     getClosestPrey(preys) {
@@ -144,9 +163,11 @@ class PrudentPredator extends Animal {
         let closestPoint = [0, 0];
         let maxDistance = Infinity;
         for (let i = 0; i < predators.length; i++) {
+            let xDistance = Math.abs(this.getXPosition() - predators[i].getXPosition());
+            let yDistance = Math.abs(this.getYPosition() - predators[i].getYPosition());
             let distance =
-                (this.getXPosition() - predators[i].getXPosition()) ** 2 +
-                (this.getYPosition() - predators[i].getYPosition()) ** 2;
+                Math.min(xDistance, this.ecosystem[0] - xDistance) ** 2 +
+                Math.min(yDistance, this.ecosystem[1] - yDistance) ** 2;
             if (distance < maxDistance) {
                 closestPoint = [predators[i].getXPosition(), predators[i].getYPosition()];
                 maxDistance = distance;
@@ -162,6 +183,10 @@ class PrudentPredator extends Animal {
         let predatorPreyAngle = Math.atan2(xDistanceBetween, yDistanceBetween);
         let xMove = this.speed * Math.sin(predatorPreyAngle);
         let yMove = this.speed * Math.cos(predatorPreyAngle);
-        this.checkMove(this.getXPosition() - xMove, this.getYPosition() - yMove);
+        let newX = Math.abs(xDistanceBetween) < this.ecosystem[0] / 2
+            ? this.getXPosition() - xMove : this.getXPosition() + xMove;
+        let newY = Math.abs(yDistanceBetween) < this.ecosystem[1] / 2
+            ? this.getYPosition() - yMove : this.getYPosition() + yMove;
+        this.checkMove(newX, newY);
     }
 }
